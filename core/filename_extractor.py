@@ -18,11 +18,16 @@ class FilenameExtractor:
             command += ["-x", "--audio-format", "mp3"]
 
         command.append(url)
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
         result = subprocess.run(
             command,
             capture_output=True,
-            text=True
+            text=True,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+            startupinfo=startupinfo,
+            shell=False
         )
 
         return result.stdout.strip()

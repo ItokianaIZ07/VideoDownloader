@@ -5,7 +5,7 @@ class Ressource:
     
     def __ressource_path(relative_path):
         try:
-            base_path = sys.__MEIPASS
+            base_path = sys._MEIPASS
 
         except Exception:
             base_path = os.path.abspath('.')

@@ -11,14 +11,19 @@ class LinkValidator:
         return re.match(LinkValidator.YOUTUBE_REGEX, url) is not None
     
     @staticmethod
-    def is_accessible(self, url: str) -> bool:
+    def is_accessible(url: str) -> bool:
         yt_dlp_path = Ressource.getYTDLP()
         try:
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             result = subprocess.run(
                 [yt_dlp_path, "--simulate", "--quiet", url],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                timeout=10
+                timeout=10,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                startupinfo=startupinfo,
+                shell=False
             )
 
             return result.returncode == 0   
