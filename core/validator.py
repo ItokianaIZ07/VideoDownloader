@@ -20,7 +20,7 @@ class LinkValidator:
                 timeout=10
             )
 
-            return result.returncode == 0
+            return result.returncode == 0   
 
         except Exception:
             return False

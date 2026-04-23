@@ -1,16 +1,16 @@
 import customtkinter as ctk
 import os
 import threading
-from tkinter import filedialog
-from tkinter import messagebox
+from tkinter import filedialog, messagebox
+
 from core.downloader import Downloader
 from core.validator import LinkValidator
+from core.filename_extractor import FilenameExtractor
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 
-#  UTIL : dossier téléchargement par défaut
 def get_default_download_path():
     return os.path.join(os.path.expanduser("~"), "Downloads")
 
@@ -21,19 +21,19 @@ class NavBar(ctk.CTkFrame):
 
         self.on_nav_change = on_nav_change
 
-        self.home_btn = ctk.CTkButton(self, text="🏠 Home",
-                                     command=lambda: self.on_nav_change("home"))
-        self.home_btn.pack(fill="x", padx=10, pady=10)
+        ctk.CTkButton(self, text="🏠 Home",
+                      command=lambda: self.on_nav_change("home")).pack(fill="x", padx=10, pady=10)
 
-        self.settings_btn = ctk.CTkButton(self, text="⚙️ Paramètres",
-                                         command=lambda: self.on_nav_change("settings"))
-        self.settings_btn.pack(fill="x", padx=10, pady=10)
+        ctk.CTkButton(self, text="⚙️ Paramètres",
+                      command=lambda: self.on_nav_change("settings")).pack(fill="x", padx=10, pady=10)
+
 
 class URLInput(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent)
 
         ctk.CTkLabel(self, text="Lien YouTube").pack(anchor="w", padx=10, pady=(10, 5))
+
         self.entry = ctk.CTkEntry(self, placeholder_text="https://youtube.com/...")
         self.entry.pack(fill="x", padx=10, pady=(0, 10))
 
@@ -48,6 +48,7 @@ class FormatSelector(ctk.CTkFrame):
         ctk.CTkLabel(self, text="Format").pack(anchor="w", padx=10, pady=(10, 5))
 
         self.var = ctk.StringVar(value="mp4")
+
         ctk.CTkOptionMenu(self, variable=self.var, values=["mp4", "mp3"]).pack(
             padx=10, pady=(0, 10), anchor="w"
         )
@@ -61,12 +62,47 @@ class ProgressBar(ctk.CTkFrame):
         super().__init__(parent)
 
         ctk.CTkLabel(self, text="Progression").pack(anchor="w", padx=10, pady=(10, 5))
+
         self.bar = ctk.CTkProgressBar(self)
         self.bar.pack(fill="x", padx=10, pady=(0, 10))
         self.bar.set(0)
 
     def set_progress(self, value):
         self.bar.set(value)
+
+
+class FilenameDisplay(ctk.CTkFrame):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        ctk.CTkLabel(self, text="Vidéo").pack(anchor="w", padx=10, pady=(10, 5))
+
+        self.label = ctk.CTkLabel(self, text="Aucune vidéo sélectionnée")
+        self.label.pack(anchor="w", padx=10, pady=(0, 10))
+
+    def set_filename(self, name):
+        self.label.configure(text=name)
+
+class StatusDisplay(ctk.CTkFrame):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        ctk.CTkLabel(self, text="Statut").pack(anchor="w", padx=10, pady=(10, 5))
+
+        self.label = ctk.CTkLabel(self, text="En attente...")
+        self.label.pack(anchor="w", padx=10, pady=(0, 10))
+
+    def set_status(self, text, color="white"):
+        self.label.configure(text=text)
+
+        colors = {
+            "green": "lightgreen",
+            "red": "red",
+            "orange": "orange",
+            "white": "white"
+        }
+
+        self.label.configure(text_color=colors.get(color, "white"))
 
 class HomePage(ctk.CTkFrame):
     def __init__(self, parent, app):
@@ -79,60 +115,86 @@ class HomePage(ctk.CTkFrame):
         self.format_selector = FormatSelector(self)
         self.format_selector.pack(fill="x", pady=5)
 
+        self.filename_display = FilenameDisplay(self)
+        self.filename_display.pack(fill="x", pady=5)
+
         self.progress = ProgressBar(self)
         self.progress.pack(fill="x", pady=5)
 
-        self.button = ctk.CTkButton(self, text="Télécharger", command=self.on_download)
-        self.button.pack(fill="x", padx=10, pady=10)
+        self.status = StatusDisplay(self)
+        self.status.pack(fill="x", pady=5)
+
+        ctk.CTkButton(self, text="Télécharger", command=self.on_download)\
+            .pack(fill="x", padx=10, pady=10)
 
     def on_download(self):
         downloader = Downloader()
+        extractor = FilenameExtractor()
 
-        def update_progress(value):
-            self.progress_bar.set_progress(value)
+        url = self.url_input.get_url().strip()
+        fmt = self.format_selector.get_format()
 
-        def run():
-            downloader.download(
-                url=self.url_input.get_url(),
-                format=self.format_selector.get_format(),
-                output_path=self.app.pages["settings"].get_download_path(),
-                progress_callback=update_progress
-            )
+        # RESET UI
+        self.progress.set_progress(0)
+        self.status.set_status("En attente...", "white")
 
-        url = self.url_input.get_url()
-
-        if url.strip() == "":
+        # VALIDATION
+        if url == "":
             messagebox.showerror("Erreur", "Veuillez entrer un lien")
             return
 
-        if LinkValidator.is_valid_url(url):
-            threading.Thread(target=run).start()
-        else:
-            messagebox.showerror("Erreur","Veuillez saisir un lien valide")
+        if not LinkValidator.is_valid_url(url):
+            messagebox.showerror("Erreur", "Lien invalide")
+            return
 
+        # GET FILENAME
+        try:
+            filename = extractor.get_filename(url, fmt)
+            self.filename_display.set_filename(filename)
+        except:
+            self.filename_display.set_filename("Impossible de récupérer le nom")
+
+        self.status.set_status("Téléchargement en cours...", "orange")
+
+        # PROGRESS CALLBACK
+        def update_progress(value):
+            self.after(0, lambda: self.progress.set_progress(value))
+
+        # THREAD DOWNLOAD
+        def run():
+            try:
+                downloader.download(
+                    url=url,
+                    format=fmt,
+                    output_path=self.app.pages["settings"].get_download_path(),
+                    progress_callback=update_progress
+                )
+
+                self.after(0, lambda: self.status.set_status("Téléchargement terminé ✅", "green"))
+
+            except Exception:
+                self.after(0, lambda: self.status.set_status("Erreur ❌", "red"))
+
+        threading.Thread(target=run).start()
 
 class SettingsPage(ctk.CTkFrame):
     def __init__(self, parent, app):
         super().__init__(parent)
         self.app = app
 
-        ctk.CTkLabel(self, text="Paramètres", font=("Arial", 16)).pack(
-            anchor="w", padx=10, pady=10
-        )
+        ctk.CTkLabel(self, text="Paramètres", font=("Arial", 16))\
+            .pack(anchor="w", padx=10, pady=10)
 
-        ctk.CTkLabel(self, text="Dossier de téléchargement").pack(
-            anchor="w", padx=10, pady=(10, 5)
-        )
+        ctk.CTkLabel(self, text="Dossier de téléchargement")\
+            .pack(anchor="w", padx=10, pady=(10, 5))
 
         self.path_var = ctk.StringVar(value=get_default_download_path())
 
-        self.path_entry = ctk.CTkEntry(self, textvariable=self.path_var)
-        self.path_entry.pack(fill="x", padx=10, pady=5)
+        self.entry = ctk.CTkEntry(self, textvariable=self.path_var)
+        self.entry.pack(fill="x", padx=10, pady=5)
 
-        self.browse_btn = ctk.CTkButton(
-            self, text="Choisir un dossier", command=self.choose_folder
-        )
-        self.browse_btn.pack(padx=10, pady=10, anchor="w")
+        ctk.CTkButton(self, text="Choisir un dossier", command=self.choose_folder)\
+            .pack(anchor="w", padx=10, pady=10)
 
     def choose_folder(self):
         folder = filedialog.askdirectory()
@@ -142,6 +204,10 @@ class SettingsPage(ctk.CTkFrame):
     def get_download_path(self):
         return self.path_var.get()
 
+
+# =========================
+# APP MAIN
+# =========================
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
