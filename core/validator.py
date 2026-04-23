@@ -1,5 +1,6 @@
 import re
 import subprocess
+from core.ressource import Ressource
 
 class LinkValidator:
 
@@ -11,7 +12,7 @@ class LinkValidator:
     
     @staticmethod
     def is_accessible(self, url: str) -> bool:
-        yt_dlp_path = "./bin/yt-dlp.exe"
+        yt_dlp_path = Ressource.getYTDLP()
         try:
             result = subprocess.run(
                 [yt_dlp_path, "--simulate", "--quiet", url],

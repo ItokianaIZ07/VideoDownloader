@@ -1,10 +1,11 @@
 import subprocess
 import re
+from core.ressource import Ressource
 
 
 class Downloader:
     def __init__(self):
-        self.yt_dlp_path = "./bin/yt-dlp.exe"
+        self.yt_dlp_path = Ressource.getYTDLP()
 
     def download(self, url, format="mp4", output_path=".", progress_callback=None):
         command = [self.yt_dlp_path, "--newline"]

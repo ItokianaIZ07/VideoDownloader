@@ -1,10 +1,11 @@
 import subprocess
+from core.ressource import Ressource
 
 
 class FilenameExtractor:
 
     def __init__(self):
-        self.yt_dlp_path = "./bin/yt-dlp.exe"
+        self.yt_dlp_path = Ressource.getYTDLP()
 
     def get_filename(self, url, format="mp4"):
         command = [
