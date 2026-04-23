@@ -28,12 +28,16 @@ class Downloader:
 
         return self.process
 
-    def wait_process(self, process, stop_flag=False, progress_callback=None):
+    def wait_process(self, process, stop_event=None, progress_callback=None):
 
-        for line in process.stdout:
-            if stop_flag:
+        while True:
+            if stop_event:
                 process.terminate()
                 return False
+
+            line = process.stdout.readline()
+            if not line:
+                break
 
             percent = self._extract_progress(line)
 
