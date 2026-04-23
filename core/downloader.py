@@ -1,5 +1,6 @@
 import subprocess
 import re
+import sys
 from core.ressource import Ressource
 
 
@@ -21,21 +22,44 @@ class Downloader:
 
         command.append(url)
 
-        process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True
-        )
+
+        process = self.__run_process(command)
 
         for line in process.stdout:
             percent = self._extract_progress(line)
 
             if percent is not None and progress_callback:
                 progress_callback(percent)
+        
+        process.wait()
+
+        return process.returncode == 0
 
     def _extract_progress(self, text):
         match = re.search(r'(\d+\.\d+)%', text)
         if match:
             return float(match.group(1)) / 100  # 0 → 1
         return None
+    
+    def __run_process(self, command):
+        if sys.platform == "win32":
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+            return subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                startupinfo=startupinfo,
+                shell=False
+            )
+        else:
+            return subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                shell=False
+            )
