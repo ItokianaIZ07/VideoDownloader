@@ -7,8 +7,10 @@ from core.ressource import Ressource
 class Downloader:
     def __init__(self):
         self.yt_dlp_path = Ressource.getYTDLP()
+        self.process = None
 
-    def download(self, url, format="mp4", output_path=".", progress_callback=None):
+    def start_download_process(self, url, format="mp4", output_path=".", progress_callback=None):
+
         command = [self.yt_dlp_path, "--newline"]
 
         # Format
@@ -22,25 +24,38 @@ class Downloader:
 
         command.append(url)
 
+        self.process = self.__run_process(command)
 
-        process = self.__run_process(command)
+        return self.process
+
+    def wait_process(self, process, stop_flag=False, progress_callback=None):
 
         for line in process.stdout:
+            if stop_flag:
+                process.terminate()
+                return False
+
             percent = self._extract_progress(line)
 
             if percent is not None and progress_callback:
                 progress_callback(percent)
-        
-        process.wait()
 
+        process.wait()
         return process.returncode == 0
+
+    def download(self, url, format="mp4", output_path=".", progress_callback=None):
+
+        process = self.start_download_process(url, format, output_path, progress_callback)
+
+        return self.wait_process(process, False, progress_callback)
+
 
     def _extract_progress(self, text):
         match = re.search(r'(\d+\.\d+)%', text)
         if match:
-            return float(match.group(1)) / 100  # 0 → 1
+            return float(match.group(1)) / 100
         return None
-    
+
     def __run_process(self, command):
         if sys.platform == "win32":
             startupinfo = subprocess.STARTUPINFO()
@@ -63,3 +78,8 @@ class Downloader:
                 text=True,
                 shell=False
             )
+
+    def stop(self):
+        if self.process:
+            self.process.terminate()
+            self.process = None

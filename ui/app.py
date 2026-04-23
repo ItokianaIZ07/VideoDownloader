@@ -4,7 +4,7 @@ import threading
 from tkinter import filedialog, messagebox
 
 from core.downloader import Downloader
-from core.validator import LinkValidator
+from core.validator import LinkValidator, NetworkValidator
 from core.filename_extractor import FilenameExtractor
 
 ctk.set_appearance_mode("dark")
@@ -112,6 +112,9 @@ class HomePage(ctk.CTkFrame):
         super().__init__(parent)
         self.app = app
 
+        self.downloader_process = None
+        self.downloading = False
+
         self.url_input = URLInput(self)
         self.url_input.pack(fill="x", pady=5)
 
@@ -127,8 +130,10 @@ class HomePage(ctk.CTkFrame):
         self.status = StatusDisplay(self)
         self.status.pack(fill="x", pady=5)
 
-        ctk.CTkButton(self, text="Télécharger", command=self.on_download)\
-            .pack(fill="x", padx=10, pady=10)
+        self.downloadButton = ctk.CTkButton(self, text="Télécharger", command=self.on_download)
+
+        
+        self.downloadButton.pack(fill="x", padx=10, pady=10)
 
     # =========================
     # Pour modifier les composants sans crash
@@ -136,7 +141,27 @@ class HomePage(ctk.CTkFrame):
     def safe_ui(self, func):
         self.after(0, func)
 
+    def reset_button(self):
+            self.downloadButton.configure(text="Télécharger")
+            self.downloading = False
+            self.stop_download = False
+
     def on_download(self):
+        if self.downloading:
+            self.stop_download = True
+
+            if self.downloader_process:
+                self.downloader_process.terminate()
+
+            self.downloadButton.configure(text="Télécharger")
+            self.downloading = False
+            self.status.set_status("Annulation...", "orange")
+            return
+
+        self.stop_download = False
+        self.downloading = True
+        self.downloadButton.configure(text="Annuler")
+
         downloader = Downloader()
         extractor = FilenameExtractor()
 
@@ -148,10 +173,17 @@ class HomePage(ctk.CTkFrame):
 
         if url == "":
             messagebox.showerror("Erreur", "Veuillez entrer un lien")
+            self.reset_button()
             return
 
         if not LinkValidator.is_valid_url(url):
             messagebox.showerror("Erreur", "Lien invalide")
+            self.reset_button()
+            return
+
+        if not NetworkValidator.is_connected():
+            messagebox.showerror("Erreur", "Pas de connexion internet")
+            self.reset_button()
             return
 
         def update_progress(value):
@@ -164,17 +196,21 @@ class HomePage(ctk.CTkFrame):
                 self.safe_ui(lambda: self.filename_display.set_filename(filename))
                 self.safe_ui(lambda: self.status.set_status("Téléchargement en cours...", "orange"))
 
-                success = downloader.download(
+                self.downloader_process = downloader.start_download_process(
                     url=url,
                     format=fmt,
                     output_path=self.app.pages["settings"].get_download_path(),
                     progress_callback=update_progress
                 )
 
-                if success:
+                success = downloader.wait_process(self.downloader_process, self.stop_download)
+
+                if self.stop_download:
+                    self.safe_ui(lambda: self.status.set_status("Annulé ❌", "red"))
+                elif success:
                     self.safe_ui(lambda: self.status.set_status("Téléchargement terminé ✅", "green"))
                 else:
-                    self.safe_ui(lambda: self.status.set_status("Échec du téléchargement ❌", "red"))
+                    self.safe_ui(lambda: self.status.set_status("Échec ❌", "red"))
 
             except Exception as e:
                 with open("error.log", "w") as f:
@@ -182,7 +218,11 @@ class HomePage(ctk.CTkFrame):
 
                 self.safe_ui(lambda: self.status.set_status("Erreur ❌", "red"))
 
+            finally:
+                self.safe_ui(self.reset_button)
+
         threading.Thread(target=run).start()
+    
 
 
 class SettingsPage(ctk.CTkFrame):
