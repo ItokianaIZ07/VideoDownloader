@@ -14,6 +14,7 @@ ctk.set_default_color_theme("blue")
 def get_default_download_path():
     return os.path.join(os.path.expanduser("~"), "Downloads")
 
+
 class NavBar(ctk.CTkFrame):
     def __init__(self, parent, on_nav_change):
         super().__init__(parent, width=120)
@@ -83,6 +84,7 @@ class FilenameDisplay(ctk.CTkFrame):
     def set_filename(self, name):
         self.label.configure(text=name)
 
+
 class StatusDisplay(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent)
@@ -103,6 +105,7 @@ class StatusDisplay(ctk.CTkFrame):
         }
 
         self.label.configure(text_color=colors.get(color, "white"))
+
 
 class HomePage(ctk.CTkFrame):
     def __init__(self, parent, app):
@@ -127,6 +130,12 @@ class HomePage(ctk.CTkFrame):
         ctk.CTkButton(self, text="Télécharger", command=self.on_download)\
             .pack(fill="x", padx=10, pady=10)
 
+    # =========================
+    # Pour modifier les composants sans crash
+    # =========================
+    def safe_ui(self, func):
+        self.after(0, func)
+
     def on_download(self):
         downloader = Downloader()
         extractor = FilenameExtractor()
@@ -134,11 +143,9 @@ class HomePage(ctk.CTkFrame):
         url = self.url_input.get_url().strip()
         fmt = self.format_selector.get_format()
 
-        # RESET UI
         self.progress.set_progress(0)
-        self.status.set_status("En attente...", "white")
+        self.status.set_status("Chargement...", "orange")
 
-        # VALIDATION
         if url == "":
             messagebox.showerror("Erreur", "Veuillez entrer un lien")
             return
@@ -147,35 +154,36 @@ class HomePage(ctk.CTkFrame):
             messagebox.showerror("Erreur", "Lien invalide")
             return
 
-        # GET FILENAME
-        try:
-            filename = extractor.get_filename(url, fmt)
-            self.filename_display.set_filename(filename)
-        except:
-            self.filename_display.set_filename("Impossible de récupérer le nom")
-
-        self.status.set_status("Téléchargement en cours...", "orange")
-
-        # PROGRESS CALLBACK
         def update_progress(value):
-            self.after(0, lambda: self.progress.set_progress(value))
+            self.safe_ui(lambda: self.progress.set_progress(value))
 
-        # THREAD DOWNLOAD
         def run():
             try:
-                downloader.download(
+                filename = extractor.get_filename(url, fmt)
+
+                self.safe_ui(lambda: self.filename_display.set_filename(filename))
+                self.safe_ui(lambda: self.status.set_status("Téléchargement en cours...", "orange"))
+
+                success = downloader.download(
                     url=url,
                     format=fmt,
                     output_path=self.app.pages["settings"].get_download_path(),
                     progress_callback=update_progress
                 )
 
-                self.after(0, lambda: self.status.set_status("Téléchargement terminé ✅", "green"))
+                if success:
+                    self.safe_ui(lambda: self.status.set_status("Téléchargement terminé ✅", "green"))
+                else:
+                    self.safe_ui(lambda: self.status.set_status("Échec du téléchargement ❌", "red"))
 
-            except Exception:
-                self.after(0, lambda: self.status.set_status("Erreur ❌", "red"))
+            except Exception as e:
+                with open("error.log", "w") as f:
+                    f.write(str(e))
+
+                self.safe_ui(lambda: self.status.set_status("Erreur ❌", "red"))
 
         threading.Thread(target=run).start()
+
 
 class SettingsPage(ctk.CTkFrame):
     def __init__(self, parent, app):
@@ -205,9 +213,6 @@ class SettingsPage(ctk.CTkFrame):
         return self.path_var.get()
 
 
-# =========================
-# APP MAIN
-# =========================
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
