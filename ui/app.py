@@ -2,7 +2,9 @@ import customtkinter as ctk
 import os
 import threading
 from tkinter import filedialog
+from tkinter import messagebox
 from core.downloader import Downloader
+from core.validator import LinkValidator
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -67,8 +69,9 @@ class ProgressBar(ctk.CTkFrame):
         self.bar.set(value)
 
 class HomePage(ctk.CTkFrame):
-    def __init__(self, parent):
+    def __init__(self, parent, app):
         super().__init__(parent)
+        self.app = app
 
         self.url_input = URLInput(self)
         self.url_input.pack(fill="x", pady=5)
@@ -92,15 +95,26 @@ class HomePage(ctk.CTkFrame):
             downloader.download(
                 url=self.url_input.get_url(),
                 format=self.format_selector.get_format(),
-                output_path=self.settings_page.get_download_path(),
+                output_path=self.app.pages["settings"].get_download_path(),
                 progress_callback=update_progress
             )
 
-        threading.Thread(target=run).start()
+        url = self.url_input.get_url()
+
+        if url.strip() == "":
+            messagebox.showerror("Erreur", "Veuillez entrer un lien")
+            return
+
+        if LinkValidator.is_valid_url(url):
+            threading.Thread(target=run).start()
+        else:
+            messagebox.showerror("Erreur","Veuillez saisir un lien valide")
+
 
 class SettingsPage(ctk.CTkFrame):
-    def __init__(self, parent):
+    def __init__(self, parent, app):
         super().__init__(parent)
+        self.app = app
 
         ctk.CTkLabel(self, text="Paramètres", font=("Arial", 16)).pack(
             anchor="w", padx=10, pady=10
@@ -145,8 +159,8 @@ class App(ctk.CTk):
         self.container.grid(row=0, column=1, sticky="nsew")
 
         self.pages = {
-            "home": HomePage(self.container),
-            "settings": SettingsPage(self.container)
+            "home": HomePage(self.container, self),
+            "settings": SettingsPage(self.container, self)
         }
 
         self.current_page = None
