@@ -1,6 +1,8 @@
 import customtkinter as ctk
 import os
+import threading
 from tkinter import filedialog
+from core.downloader import Downloader
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -77,16 +79,22 @@ class HomePage(ctk.CTkFrame):
         self.progress = ProgressBar(self)
         self.progress.pack(fill="x", pady=5)
 
-        self.button = ctk.CTkButton(self, text="Télécharger", command=self.fake_download)
+        self.button = ctk.CTkButton(self, text="Télécharger", command=self.on_download)
         self.button.pack(fill="x", padx=10, pady=10)
 
-    def fake_download(self):
-        import threading, time
+    def on_download(self):
+        downloader = Downloader()
+
+        def update_progress(value):
+            self.progress_bar.set_progress(value)
 
         def run():
-            for i in range(101):
-                self.progress.set_progress(i / 100)
-                time.sleep(0.02)
+            downloader.download(
+                url=self.url_input.get_url(),
+                format=self.format_selector.get_format(),
+                output_path=self.settings_page.get_download_path(),
+                progress_callback=update_progress
+            )
 
         threading.Thread(target=run).start()
 
