@@ -6,6 +6,7 @@ from tkinter import filedialog, messagebox
 from core.downloader import Downloader
 from core.validator import LinkValidator, NetworkValidator
 from core.filename_extractor import FilenameExtractor
+from core.ressource import Ressource
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -203,7 +204,7 @@ class HomePage(ctk.CTkFrame):
                     progress_callback=update_progress
                 )
 
-                success = downloader.wait_process(self.downloader_process, self.stop_download)
+                success = downloader.wait_process(self.downloader_process, self.stop_download, update_progress) # ty no modification(nampiana update_progress)
 
                 if self.stop_download:
                     self.safe_ui(lambda: self.status.set_status("Annulé ❌", "red"))
@@ -258,7 +259,8 @@ class App(ctk.CTk):
         super().__init__()
 
         self.title("YouTube Downloader")
-        self.geometry("700x400")
+        self.iconbitmap(Ressource.getIcon())
+        self.geometry("800x550")
 
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
