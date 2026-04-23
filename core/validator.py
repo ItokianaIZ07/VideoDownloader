@@ -30,3 +30,13 @@ class LinkValidator:
 
         except Exception:
             return False
+        
+import socket
+class NetworkValidator:
+    @staticmethod
+    def is_connected():
+        try:
+            socket.create_connection(("8.8.8.8", 53), timeout=20)
+            return True
+        except OSError:
+            return False
