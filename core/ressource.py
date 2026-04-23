@@ -14,3 +14,7 @@ class Ressource:
     @staticmethod
     def getYTDLP():
         return Ressource.__ressource_path("./bin/yt-dlp.exe")
+    
+    @staticmethod
+    def getIcon():
+        return Ressource.__ressource_path("./assets/icon.ico")
