@@ -14,4 +14,3 @@ if __name__ == "__main__":
     except Exception as e:
         with open("error.log", "w") as f:
             f.write(str(e))
-        

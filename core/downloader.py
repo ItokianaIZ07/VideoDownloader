@@ -53,7 +53,7 @@ class Downloader:
                 progress_callback(percent)
 
         process.wait()
-        return process.returncode == 0
+        return process.returncode != 0
 
     def download(self, url, format="mp4", output_path=".", progress_callback=None):
 
