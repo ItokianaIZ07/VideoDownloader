@@ -1,6 +1,7 @@
 import subprocess
 import re
 import sys
+import os
 from core.ressource import Ressource
 
 
@@ -19,6 +20,13 @@ class Downloader:
         else:
             command += ["-f", "mp4"]
 
+        # command += ["--cookies-from-browser", "edge"]
+        if os.path.exists("./assets/cookies.txt"):
+            command += ["--cookies", "./assets/cookies.txt"]
+
+        command += ["--js-runtimes", "node"]
+        
+
         # Output path
         command += ["-o", f"{output_path}/%(title)s.%(ext)s"]
 
@@ -31,7 +39,7 @@ class Downloader:
     def wait_process(self, process, stop_event=None, progress_callback=None):
 
         while True:
-            if stop_event:
+            if stop_event and stop_event.is_set():
                 process.terminate()
                 return False
 

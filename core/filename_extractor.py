@@ -1,4 +1,5 @@
 import subprocess
+import os
 from core.ressource import Ressource
 
 
@@ -16,6 +17,12 @@ class FilenameExtractor:
 
         if format == "mp3":
             command += ["-x", "--audio-format", "mp3"]
+        
+        # command += ["--cookies-from-browser", "chrome"]
+        if os.path.exists("./assets/cookies.txt"):
+            command += ["--cookies", "./assets/cookies.txt"]
+        
+        command += ["--js-runtimes", "node"]
 
         command.append(url)
         startupinfo = subprocess.STARTUPINFO()
@@ -23,11 +30,19 @@ class FilenameExtractor:
 
         result = subprocess.run(
             command,
+            # stdout=subprocess.PIPE,
+            # stderr=subprocess.PIPE,
             capture_output=True,
             text=True,
             creationflags=subprocess.CREATE_NO_WINDOW,
             startupinfo=startupinfo,
             shell=False
         )
+
+        # stdout, stderr = result.communicate()
+
+        if result.returncode != 0:
+            raise Exception(result.stderr)
+        
 
         return result.stdout.strip()

@@ -115,6 +115,8 @@ class HomePage(ctk.CTkFrame):
 
         self.downloader_process = None
         self.downloading = False
+        self.stop_event = threading.Event()
+
 
         self.url_input = URLInput(self)
         self.url_input.pack(fill="x", pady=5)
@@ -146,10 +148,12 @@ class HomePage(ctk.CTkFrame):
             self.downloadButton.configure(text="Télécharger")
             self.downloading = False
             self.stop_download = False
+            self.stop_event.clear()
 
     def on_download(self):
         if self.downloading:
             self.stop_download = True
+            self.stop_event.set()
 
             if self.downloader_process:
                 self.downloader_process.terminate()
@@ -160,6 +164,7 @@ class HomePage(ctk.CTkFrame):
             return
 
         self.stop_download = False
+        self.stop_event.clear()
         self.downloading = True
         self.downloadButton.configure(text="Annuler")
 
@@ -204,9 +209,9 @@ class HomePage(ctk.CTkFrame):
                     progress_callback=update_progress
                 )
 
-                success = downloader.wait_process(self.downloader_process, self.stop_download, update_progress) # ty no modification(nampiana update_progress)
+                success = downloader.wait_process(self.downloader_process, self.stop_event, update_progress) # ty no modification(nampiana update_progress)
 
-                if self.stop_download:
+                if self.stop_event.is_set():
                     self.safe_ui(lambda: self.status.set_status("Annulé ❌", "red"))
                 elif success:
                     self.safe_ui(lambda: self.status.set_status("Téléchargement terminé ✅", "green"))
