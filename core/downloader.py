@@ -8,6 +8,7 @@ from core.ressource import Ressource
 class Downloader:
     def __init__(self):
         self.yt_dlp_path = Ressource.getYTDLP()
+        self.cookies = Ressource.getCookies()
         self.process = None
 
     def start_download_process(self, url, format="mp4", output_path=".", progress_callback=None):
@@ -21,8 +22,8 @@ class Downloader:
             command += ["-f", "mp4"]
 
         # command += ["--cookies-from-browser", "edge"]
-        if os.path.exists("./assets/cookies.txt"):
-            command += ["--cookies", "./assets/cookies.txt"]
+        if os.path.exists(self.cookies):
+            command += ["--cookies", self.cookies]
 
         command += ["--js-runtimes", "node"]
         

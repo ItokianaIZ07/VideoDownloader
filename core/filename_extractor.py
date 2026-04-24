@@ -7,6 +7,7 @@ class FilenameExtractor:
 
     def __init__(self):
         self.yt_dlp_path = Ressource.getYTDLP()
+        self.cookies = Ressource.getCookies()
 
     def get_filename(self, url, format="mp4"):
         command = [
@@ -19,8 +20,8 @@ class FilenameExtractor:
             command += ["-x", "--audio-format", "mp3"]
         
         # command += ["--cookies-from-browser", "chrome"]
-        if os.path.exists("./assets/cookies.txt"):
-            command += ["--cookies", "./assets/cookies.txt"]
+        if os.path.exists(self.cookies):
+            command += ["--cookies", self.cookies]
         
         command += ["--js-runtimes", "node"]
 

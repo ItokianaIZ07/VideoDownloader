@@ -18,3 +18,7 @@ class Ressource:
     @staticmethod
     def getIcon():
         return Ressource.__ressource_path("./assets/icon.ico")
+    
+    @staticmethod
+    def getCookies():
+        return Ressource.__ressource_path("./assets/cookies.txt")
