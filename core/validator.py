@@ -31,6 +31,10 @@ class LinkValidator:
         except Exception:
             return False
         
+    @staticmethod
+    def is_playList(url: str)->bool:
+        return url.__contains__("list")
+        
 import socket
 class NetworkValidator:
     @staticmethod

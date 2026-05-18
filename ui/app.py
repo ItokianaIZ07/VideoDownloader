@@ -200,7 +200,8 @@ class HomePage(ctk.CTkFrame):
                 filename = extractor.get_filename(url, fmt)
 
                 self.safe_ui(lambda: self.filename_display.set_filename(filename))
-                self.safe_ui(lambda: self.status.set_status("Téléchargement en cours...", "orange"))
+                status = "Téléchargement de la playlist..." if LinkValidator.is_playList(url) else "Téléchargement en cours..."
+                self.safe_ui(lambda: self.status.set_status(status, "orange"))
 
                 self.downloader_process = downloader.start_download_process(
                     url=url,
