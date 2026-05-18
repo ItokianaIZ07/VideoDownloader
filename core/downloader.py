@@ -48,10 +48,15 @@ class Downloader:
             if not line:
                 break
 
-            percent = self._extract_progress(line)
+            # percent = self._extract_progress(line)
 
-            if percent is not None and progress_callback:
-                progress_callback(percent)
+            # if percent is not None and progress_callback:
+            #     progress_callback(percent)
+
+            info = self._extract_download_info(line)
+
+            if info and progress_callback:
+                progress_callback(info)
 
         process.wait()
         return process.returncode == 0
@@ -96,3 +101,44 @@ class Downloader:
         if self.process:
             self.process.terminate()
             self.process = None
+
+    def _extract_download_info(self, text):
+        # Exemple ligne yt-dlp :
+        # [download]  45.3% of 120.50MiB at 1.20MiB/s ETA 00:32
+
+        match = re.search(
+            r'(\d+(?:\.\d+)?)%\s+of\s+([\S]+).*?at\s+([\S]+).*?ETA\s+([\S]+)',
+            text
+        )
+
+        if match:
+            percent = float(match.group(1)) / 100
+            total_size = match.group(2).strip()
+            speed = match.group(3).strip()
+            eta = match.group(4).strip()
+
+            return {
+                "percent": percent,
+                "total": total_size,
+                "speed": speed,
+                "eta": eta
+            }
+
+        # fallback si ligne partielle (yt-dlp n'affiche pas toujours tout)
+        match_simple = re.search(
+            r'(\d+(?:\.\d+)?)%\s+of\s+([\d\.]+\s*\w+)',
+            text
+        )
+
+        if match_simple:
+            percent = float(match_simple.group(1)) / 100
+            total_size = match_simple.group(2).strip()
+
+            return {
+                "percent": percent,
+                "total": total_size,
+                "speed": "N/A",
+                "eta": "N/A"
+            }
+
+        return None

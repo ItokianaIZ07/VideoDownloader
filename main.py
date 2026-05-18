@@ -1,7 +1,6 @@
 from ui.app import App
 from core.ressource import Ressource
-import os
-import sys
+from datetime import datetime
 
 if __name__ == "__main__":
     try:
@@ -12,5 +11,9 @@ if __name__ == "__main__":
         app = App()
         app.mainloop()
     except Exception as e:
-        with open("error.log", "w") as f:
-            f.write(str(e))
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        with open("error.log", "a", encoding="utf-8") as f:
+            f.write(f"[{now}] ERROR LOG\n")
+            f.write("-----------------\n")
+            f.write(str(e) + "\n")
