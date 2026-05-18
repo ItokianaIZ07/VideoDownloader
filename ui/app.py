@@ -69,8 +69,14 @@ class ProgressBar(ctk.CTkFrame):
         self.bar.pack(fill="x", padx=10, pady=(0, 10))
         self.bar.set(0)
 
+        self.info_label = ctk.CTkLabel(self, text="0 MB / 0 MB")
+        self.info_label.pack(anchor="w", padx=10, pady=(0, 10))
+
     def set_progress(self, value):
         self.bar.set(value)
+
+    def set_info(self, text):
+        self.info_label.configure(text=text)
 
 
 class FilenameDisplay(ctk.CTkFrame):
@@ -193,11 +199,30 @@ class HomePage(ctk.CTkFrame):
             return
 
         def update_progress(value):
-            self.safe_ui(lambda: self.progress.set_progress(value))
+
+            if not value:
+                return
+
+            if not isinstance(value, dict):
+                return
+
+            percent = value.get("percent", 0)
+            total = value.get("total", "N/A")
+            speed = value.get("speed", "N/A")
+            eta = value.get("eta", "N/A")
+
+            self.safe_ui(lambda: self.progress.set_progress(percent))
+
+            text = f"{round(percent * 100, 1)}% | {total} | {speed} | ETA {eta}"
+
+            self.safe_ui(lambda: self.progress.set_info(text))
 
         def run():
             try:
                 filename = extractor.get_filename(url, fmt)
+
+                # if self.stop_event.is_set():
+                #     return
 
                 self.safe_ui(lambda: self.filename_display.set_filename(filename))
                 status = "Téléchargement de la playlist..." if LinkValidator.is_playList(url) else "Téléchargement en cours..."
